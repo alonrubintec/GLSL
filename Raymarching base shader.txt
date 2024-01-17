@@ -1,0 +1,58 @@
+//GLSL Raymarching base shader
+float smin(float a, float b, float k) {
+    float h = clamp(0.5 + 0.5*(a-b)/k, 0.0, 1.0);
+    return mix(a, b, h) - k*h*(1.0-h);
+}
+ 
+float sdSphere( vec3 p, float s)
+{
+    return length(p) -s;
+}
+ 
+float sdBox( vec3 p, vec3 b)
+{
+    vec3 q = abs(p) - b;
+    return length(max(q,0.0)) + min(max(q.x, max(q.y, q.z)),0.0);
+}
+ 
+vec3 rot3D(vec3 p, vec3 axis, float angle)
+{
+    return mix(dot(axis, p) * axis, p, cos(angle))
+        + cross(axis, p) * sin(angle);
+}
+ 
+float map(vec3 p)
+{
+    vec3 spherePos = vec3(sin(iTime)*3., 0, 0);
+    float sphere = sdSphere(p - spherePos, 1.);
+    float box = sdBox(p, vec3(.75));
+    float ground = p.y +0.6 + sin(iTime) * 0.5;
+    return smin(ground, smin(sphere, box, 2.), 1.); 
+}
+ 
+ 
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    vec2 uv = (fragCoord * 2. - iResolution.xy) / iResolution.y;
+    // Initialization
+    vec3 ro = vec3( 0, 0, -3);
+    vec3 rd = normalize(vec3(uv * 0.75, 1));
+    vec3 col = vec3(0);
+    float t = 0.;
+
+    // Raymarching
+    for (int i = 0; i < 80; i++)
+    {
+        vec3 p = ro + rd * t;
+ 
+        float d = map(p);
+ 
+        t += d;
+        col = vec3(i) / 80.;
+        if (d < .001 || t > 100.) break;
+ 
+    }
+    // Coloring
+    col = vec3(t * 0.3);
+    fragColor = vec4(col, 1);
+}
